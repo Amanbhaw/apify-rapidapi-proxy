@@ -1,0 +1,261 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Scraping Tools API - YouTube Transcripts, Lead Enrichment, Trends & Maps",
+    "description": "All-in-one scraping API suite: extract YouTube video transcripts in 100+ languages, enrich B2B leads with emails and tech stack data, scrape Google Trends for keyword research, and pull business leads from Google Maps with emails and phones. Built on top of reliable scraping infrastructure. Perfect for marketers, sales teams, researchers, and AI engineers.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Aman Bhawsar",
+      "url": "https://apify.com/inexhaustible_glass"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://YOUR-DEPLOYED-SERVER.onrender.com",
+      "description": "Production server (replace with your deployed URL)"
+    }
+  ],
+  "paths": {
+    "/youtube-transcript": {
+      "post": {
+        "summary": "Extract YouTube video transcripts",
+        "description": "Extract transcripts, subtitles, and closed captions from YouTube videos in 100+ languages. Supports watch URLs, youtu.be, Shorts, and embed URLs. Bulk processing up to 50 videos per request.",
+        "operationId": "youtubeTranscript",
+        "tags": ["YouTube"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["urls"],
+                "properties": {
+                  "urls": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "description": "List of YouTube video URLs (max 50)",
+                    "example": [
+                      "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+                      "https://youtu.be/jNQXAC9IVRw"
+                    ]
+                  },
+                  "language": {
+                    "type": "string",
+                    "description": "Preferred subtitle language code (en, hi, es, fr, de, ja, ko, ar, pt, zh, etc.)",
+                    "default": "en",
+                    "example": "en"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Transcripts extracted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "count": { "type": "integer" },
+                    "results": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "url": { "type": "string" },
+                          "video_id": { "type": "string" },
+                          "language": { "type": "string" },
+                          "line_count": { "type": "integer" },
+                          "transcript": { "type": "string" },
+                          "lines": { "type": "array", "items": { "type": "string" } }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Invalid input" },
+          "500": { "description": "Server error" }
+        }
+      }
+    },
+    "/lead-enrichment": {
+      "post": {
+        "summary": "B2B lead enrichment from company URLs",
+        "description": "Find business emails, phone numbers, LinkedIn profiles, tech stack (40+ tools), WHOIS data, SSL info, and lead quality scores for any company website. Perfect for sales prospecting, cold outreach, and CRM enrichment. Max 25 URLs per request.",
+        "operationId": "leadEnrichment",
+        "tags": ["Lead Generation"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["urls"],
+                "properties": {
+                  "urls": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "description": "List of company website URLs (max 25)",
+                    "example": ["https://stripe.com", "https://figma.com"]
+                  },
+                  "firstName": {
+                    "type": "string",
+                    "description": "Optional contact first name (for email pattern prediction)",
+                    "example": "John"
+                  },
+                  "lastName": {
+                    "type": "string",
+                    "description": "Optional contact last name",
+                    "example": "Doe"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Enriched lead data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "count": { "type": "integer" },
+                    "leads": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "domain": { "type": "string" },
+                          "company_name": { "type": "string" },
+                          "emails": { "type": "array", "items": { "type": "string" } },
+                          "phones": { "type": "array", "items": { "type": "string" } },
+                          "linkedin": { "type": "array", "items": { "type": "string" } },
+                          "tech_stack": { "type": "array", "items": { "type": "string" } },
+                          "lead_grade": { "type": "string" },
+                          "lead_score": { "type": "integer" },
+                          "has_mx_records": { "type": "boolean" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/google-trends": {
+      "post": {
+        "summary": "Google Trends keyword research and analysis",
+        "description": "Analyze Google Trends data for SEO, keyword research, and market analysis. Get interest over time, regional breakdown, related queries (top and rising), and trending searches. Compare up to 100 keywords per request.",
+        "operationId": "googleTrends",
+        "tags": ["SEO"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["keywords"],
+                "properties": {
+                  "keywords": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "description": "Keywords to analyze (max 100)",
+                    "example": ["AI", "ChatGPT", "Claude"]
+                  },
+                  "timeframe": {
+                    "type": "string",
+                    "description": "Time range: 'today 1-m', 'today 3-m', 'today 12-m', 'today 5-y', 'all', or custom '2024-01-01 2024-12-31'",
+                    "default": "today 3-m"
+                  },
+                  "geo": {
+                    "type": "string",
+                    "description": "Country code (US, IN, GB, DE, FR, JP, etc). Empty = worldwide",
+                    "example": "US"
+                  },
+                  "category": {
+                    "type": "integer",
+                    "description": "Category ID (0 = all)",
+                    "default": 0
+                  },
+                  "includeTrending": {
+                    "type": "boolean",
+                    "description": "Also fetch today's trending searches",
+                    "default": false
+                  },
+                  "trendingCountry": {
+                    "type": "string",
+                    "description": "Country for trending searches",
+                    "default": "united_states"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Trend data retrieved successfully" }
+        }
+      }
+    },
+    "/google-maps-leads": {
+      "post": {
+        "summary": "Extract business leads from Google Maps",
+        "description": "Scrape Google Maps for business listings with emails, phones, websites, ratings, reviews, and categories. Visits business websites to extract contact emails. Perfect for local SEO, sales prospecting, and cold outreach.",
+        "operationId": "googleMapsLeads",
+        "tags": ["Lead Generation"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["search_query"],
+                "properties": {
+                  "search_query": {
+                    "type": "string",
+                    "description": "Google Maps search query (category + city, business name, or landmark)",
+                    "example": "Restaurants in Mumbai"
+                  },
+                  "max_results": {
+                    "type": "integer",
+                    "description": "Max businesses to extract (1-100)",
+                    "default": 20
+                  },
+                  "extract_emails": {
+                    "type": "boolean",
+                    "description": "Visit business websites to extract emails",
+                    "default": true
+                  },
+                  "extract_website": {
+                    "type": "boolean",
+                    "description": "Scrape additional website data",
+                    "default": true
+                  },
+                  "language": {
+                    "type": "string",
+                    "default": "en"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Business leads extracted" }
+        }
+      }
+    }
+  }
+}

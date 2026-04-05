@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: apify-rapidapi-proxy
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: APIFY_TOKEN
+        sync: false
+      - key: RAPIDAPI_PROXY_SECRET
+        sync: false
+      - key: NODE_VERSION
+        value: "20"
+    healthCheckPath: /health
