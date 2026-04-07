@@ -11,8 +11,8 @@
   },
   "servers": [
     {
-      "url": "https://YOUR-DEPLOYED-SERVER.onrender.com",
-      "description": "Production server (replace with your deployed URL)"
+      "url": "https://apify-rapidapi-proxy.onrender.com",
+      "description": "Production server on Render"
     }
   ],
   "paths": {
