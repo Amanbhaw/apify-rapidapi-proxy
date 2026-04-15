@@ -1,27 +1,23 @@
 {
   "openapi": "3.0.0",
   "info": {
-    "title": "Scraping Tools API - YouTube Transcripts, Lead Enrichment, Trends & Maps",
-    "description": "All-in-one scraping API suite: extract YouTube video transcripts in 100+ languages, enrich B2B leads with emails and tech stack data, scrape Google Trends for keyword research, and pull business leads from Google Maps with emails and phones. Built on top of reliable scraping infrastructure. Perfect for marketers, sales teams, researchers, and AI engineers.",
-    "version": "1.0.0",
+    "title": "Global Scraping API Suite — 13 Endpoints",
+    "description": "Complete scraping toolkit: YouTube transcripts, B2B lead enrichment, Google Trends & Maps, Instagram profiles, Bluesky intelligence, Etsy shops, plus India (Tenders/GST/MCA) & Global B2B (UK/France/Germany) company data. Perfect for marketers, sales teams, VCs, researchers, AI engineers.",
+    "version": "2.0.0",
     "contact": {
       "name": "Aman Bhawsar",
       "url": "https://apify.com/inexhaustible_glass"
     }
   },
   "servers": [
-    {
-      "url": "https://apify-rapidapi-proxy.onrender.com",
-      "description": "Production server on Render"
-    }
+    { "url": "https://apify-rapidapi-proxy.onrender.com", "description": "Production" }
   ],
   "paths": {
     "/youtube-transcript": {
       "post": {
-        "summary": "Extract YouTube video transcripts",
-        "description": "Extract transcripts, subtitles, and closed captions from YouTube videos in 100+ languages. Supports watch URLs, youtu.be, Shorts, and embed URLs. Bulk processing up to 50 videos per request.",
-        "operationId": "youtubeTranscript",
-        "tags": ["YouTube"],
+        "summary": "YouTube Transcript Extractor",
+        "description": "Bulk extract transcripts from YouTube videos. 100+ languages.",
+        "tags": ["Content"],
         "requestBody": {
           "required": true,
           "content": {
@@ -30,66 +26,21 @@
                 "type": "object",
                 "required": ["urls"],
                 "properties": {
-                  "urls": {
-                    "type": "array",
-                    "items": { "type": "string" },
-                    "description": "List of YouTube video URLs (max 50)",
-                    "example": [
-                      "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-                      "https://youtu.be/jNQXAC9IVRw"
-                    ]
-                  },
-                  "language": {
-                    "type": "string",
-                    "description": "Preferred subtitle language code (en, hi, es, fr, de, ja, ko, ar, pt, zh, etc.)",
-                    "default": "en",
-                    "example": "en"
-                  }
+                  "urls": { "type": "array", "items": { "type": "string" }, "example": ["https://www.youtube.com/watch?v=dQw4w9WgXcQ"] },
+                  "language": { "type": "string", "example": "en" }
                 }
               }
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": "Transcripts extracted successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": { "type": "boolean" },
-                    "count": { "type": "integer" },
-                    "results": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "url": { "type": "string" },
-                          "video_id": { "type": "string" },
-                          "language": { "type": "string" },
-                          "line_count": { "type": "integer" },
-                          "transcript": { "type": "string" },
-                          "lines": { "type": "array", "items": { "type": "string" } }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": { "description": "Invalid input" },
-          "500": { "description": "Server error" }
-        }
+        "responses": { "200": { "description": "Transcripts" } }
       }
     },
     "/lead-enrichment": {
       "post": {
-        "summary": "B2B lead enrichment from company URLs",
-        "description": "Find business emails, phone numbers, LinkedIn profiles, tech stack (40+ tools), WHOIS data, SSL info, and lead quality scores for any company website. Perfect for sales prospecting, cold outreach, and CRM enrichment. Max 25 URLs per request.",
-        "operationId": "leadEnrichment",
-        "tags": ["Lead Generation"],
+        "summary": "B2B Lead Enrichment",
+        "description": "Enrich company URLs with emails, phones, tech stack, WHOIS, SSL, lead scores.",
+        "tags": ["B2B Leads"],
         "requestBody": {
           "required": true,
           "content": {
@@ -98,68 +49,22 @@
                 "type": "object",
                 "required": ["urls"],
                 "properties": {
-                  "urls": {
-                    "type": "array",
-                    "items": { "type": "string" },
-                    "description": "List of company website URLs (max 25)",
-                    "example": ["https://stripe.com", "https://figma.com"]
-                  },
-                  "firstName": {
-                    "type": "string",
-                    "description": "Optional contact first name (for email pattern prediction)",
-                    "example": "John"
-                  },
-                  "lastName": {
-                    "type": "string",
-                    "description": "Optional contact last name",
-                    "example": "Doe"
-                  }
+                  "urls": { "type": "array", "items": { "type": "string" }, "example": ["https://stripe.com"] },
+                  "firstName": { "type": "string" },
+                  "lastName": { "type": "string" }
                 }
               }
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": "Enriched lead data",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": { "type": "boolean" },
-                    "count": { "type": "integer" },
-                    "leads": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "domain": { "type": "string" },
-                          "company_name": { "type": "string" },
-                          "emails": { "type": "array", "items": { "type": "string" } },
-                          "phones": { "type": "array", "items": { "type": "string" } },
-                          "linkedin": { "type": "array", "items": { "type": "string" } },
-                          "tech_stack": { "type": "array", "items": { "type": "string" } },
-                          "lead_grade": { "type": "string" },
-                          "lead_score": { "type": "integer" },
-                          "has_mx_records": { "type": "boolean" }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
+        "responses": { "200": { "description": "Enriched leads" } }
       }
     },
     "/google-trends": {
       "post": {
-        "summary": "Google Trends keyword research and analysis",
-        "description": "Analyze Google Trends data for SEO, keyword research, and market analysis. Get interest over time, regional breakdown, related queries (top and rising), and trending searches. Compare up to 100 keywords per request.",
-        "operationId": "googleTrends",
-        "tags": ["SEO"],
+        "summary": "Google Trends Analyzer",
+        "description": "Keyword trends, regions, related queries.",
+        "tags": ["Content"],
         "requestBody": {
           "required": true,
           "content": {
@@ -168,53 +73,22 @@
                 "type": "object",
                 "required": ["keywords"],
                 "properties": {
-                  "keywords": {
-                    "type": "array",
-                    "items": { "type": "string" },
-                    "description": "Keywords to analyze (max 100)",
-                    "example": ["AI", "ChatGPT", "Claude"]
-                  },
-                  "timeframe": {
-                    "type": "string",
-                    "description": "Time range: 'today 1-m', 'today 3-m', 'today 12-m', 'today 5-y', 'all', or custom '2024-01-01 2024-12-31'",
-                    "default": "today 3-m"
-                  },
-                  "geo": {
-                    "type": "string",
-                    "description": "Country code (US, IN, GB, DE, FR, JP, etc). Empty = worldwide",
-                    "example": "US"
-                  },
-                  "category": {
-                    "type": "integer",
-                    "description": "Category ID (0 = all)",
-                    "default": 0
-                  },
-                  "includeTrending": {
-                    "type": "boolean",
-                    "description": "Also fetch today's trending searches",
-                    "default": false
-                  },
-                  "trendingCountry": {
-                    "type": "string",
-                    "description": "Country for trending searches",
-                    "default": "united_states"
-                  }
+                  "keywords": { "type": "array", "items": { "type": "string" }, "example": ["AI", "ChatGPT"] },
+                  "timeframe": { "type": "string", "example": "today 3-m" },
+                  "geo": { "type": "string", "example": "US" }
                 }
               }
             }
           }
         },
-        "responses": {
-          "200": { "description": "Trend data retrieved successfully" }
-        }
+        "responses": { "200": { "description": "Trends data" } }
       }
     },
     "/google-maps-leads": {
       "post": {
-        "summary": "Extract business leads from Google Maps",
-        "description": "Scrape Google Maps for business listings with emails, phones, websites, ratings, reviews, and categories. Visits business websites to extract contact emails. Perfect for local SEO, sales prospecting, and cold outreach.",
-        "operationId": "googleMapsLeads",
-        "tags": ["Lead Generation"],
+        "summary": "Google Maps Business Leads",
+        "description": "Extract business leads from Google Maps with emails, phones, addresses.",
+        "tags": ["B2B Leads"],
         "requestBody": {
           "required": true,
           "content": {
@@ -223,38 +97,212 @@
                 "type": "object",
                 "required": ["search_query"],
                 "properties": {
-                  "search_query": {
-                    "type": "string",
-                    "description": "Google Maps search query (category + city, business name, or landmark)",
-                    "example": "Restaurants in Mumbai"
-                  },
-                  "max_results": {
-                    "type": "integer",
-                    "description": "Max businesses to extract (1-100)",
-                    "default": 20
-                  },
-                  "extract_emails": {
-                    "type": "boolean",
-                    "description": "Visit business websites to extract emails",
-                    "default": true
-                  },
-                  "extract_website": {
-                    "type": "boolean",
-                    "description": "Scrape additional website data",
-                    "default": true
-                  },
-                  "language": {
-                    "type": "string",
-                    "default": "en"
-                  }
+                  "search_query": { "type": "string", "example": "Restaurants in Mumbai" },
+                  "max_results": { "type": "integer", "example": 20 },
+                  "extract_emails": { "type": "boolean", "example": true }
                 }
               }
             }
           }
         },
-        "responses": {
-          "200": { "description": "Business leads extracted" }
-        }
+        "responses": { "200": { "description": "Business leads" } }
+      }
+    },
+    "/instagram-profile": {
+      "post": {
+        "summary": "Instagram Profile Intelligence",
+        "description": "Extract Instagram profile data, emails from bio, influencer tier, lead quality score.",
+        "tags": ["Social Media"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["usernames"],
+                "properties": {
+                  "usernames": { "type": "array", "items": { "type": "string" }, "example": ["nike", "garyvee"] },
+                  "concurrency": { "type": "integer", "example": 5 }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Instagram profiles with enrichment" } }
+      }
+    },
+    "/bluesky-profile": {
+      "post": {
+        "summary": "Bluesky Intelligence (SkyScout)",
+        "description": "Bluesky profiles, emails from bio, niche classification. Uses AT Protocol — no blocks.",
+        "tags": ["Social Media"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "handles": { "type": "array", "items": { "type": "string" }, "example": ["bsky.app"] },
+                  "searchQuery": { "type": "string", "example": "startup founder" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Bluesky profiles" } }
+      }
+    },
+    "/etsy-shop": {
+      "post": {
+        "summary": "Etsy Shop Intelligence (ShopHound)",
+        "description": "Deep Etsy shop research — sales, reviews, revenue estimate, seller tier.",
+        "tags": ["E-commerce"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["shops"],
+                "properties": {
+                  "shops": { "type": "array", "items": { "type": "string" }, "example": ["LittleMushroomBakery"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Etsy shops" } }
+      }
+    },
+    "/india-tenders": {
+      "post": {
+        "summary": "India Government Tenders (TenderHawk)",
+        "description": "Latest Indian govt tenders from CPPP. For contractors, MSMEs, PSU suppliers.",
+        "tags": ["India B2B"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "keywords": { "type": "array", "items": { "type": "string" }, "example": ["cpwd"] },
+                  "categories": { "type": "array", "items": { "type": "string" }, "example": ["construction"] },
+                  "minGrade": { "type": "string", "example": "D" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Tenders" } }
+      }
+    },
+    "/india-gst": {
+      "post": {
+        "summary": "India GST Verification (GSTHawk)",
+        "description": "Bulk verify GSTIN. Returns legal name, status, PAN, compliance grade.",
+        "tags": ["India B2B"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["gstins", "appyflowKey"],
+                "properties": {
+                  "gstins": { "type": "array", "items": { "type": "string" }, "example": ["27AAAPG7885B1ZB"] },
+                  "appyflowKey": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Verified GSTINs" } }
+      }
+    },
+    "/india-company": {
+      "post": {
+        "summary": "India Company Master Data (MCAHawk)",
+        "description": "MCA data for 25M+ Indian companies. Status, capital, directors.",
+        "tags": ["India B2B"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "cins": { "type": "array", "items": { "type": "string" }, "example": ["L65190MH2008PLC180169"] },
+                  "searchQueries": { "type": "array", "items": { "type": "string" }, "example": ["reliance"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Indian companies" } }
+      }
+    },
+    "/uk-company": {
+      "post": {
+        "summary": "UK Companies House Data (UKHawk)",
+        "description": "5M+ UK companies. Status, SIC codes, directors.",
+        "tags": ["Global B2B"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "companyNumbers": { "type": "array", "items": { "type": "string" }, "example": ["00445790"] },
+                  "searchQueries": { "type": "array", "items": { "type": "string" }, "example": ["tesco"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "UK companies" } }
+      }
+    },
+    "/france-company": {
+      "post": {
+        "summary": "France Company Data (FRHawk)",
+        "description": "10M+ French companies. SIREN, SIRET, capital, industry.",
+        "tags": ["Global B2B"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "sirens": { "type": "array", "items": { "type": "string" }, "example": ["542051180"] },
+                  "searchQueries": { "type": "array", "items": { "type": "string" }, "example": ["totalenergies"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "French companies" } }
+      }
+    },
+    "/germany-company": {
+      "post": {
+        "summary": "Germany Handelsregister (DEHawk)",
+        "description": "German companies via Northdata. Name, HRB, LEI, management.",
+        "tags": ["Global B2B"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["queries"],
+                "properties": {
+                  "queries": { "type": "array", "items": { "type": "string" }, "example": ["Volkswagen+AG,+Wolfsburg/HRB+100484"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "German companies" } }
       }
     }
   }
