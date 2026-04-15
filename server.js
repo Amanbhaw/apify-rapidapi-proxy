@@ -1,18 +1,10 @@
 /**
- * RapidAPI HTTP proxy for Apify actors.
- *
- * Exposes 4 endpoints that internally call the corresponding Apify actor
- * and return clean JSON responses:
- *
- *   POST /youtube-transcript   → inexhaustible_glass/youtube-transcript-extractor
- *   POST /lead-enrichment      → inexhaustible_glass/linkedin-email-finder
- *   POST /google-trends        → inexhaustible_glass/google-trends-scraper
- *   POST /google-maps-leads    → amanbhawsar/smart-lead-finder-email-extractor
+ * RapidAPI HTTP proxy for all Apify actors (13 endpoints).
+ * Deploy to Render.com / Railway — passes through to Apify actors.
  *
  * Required env vars:
- *   APIFY_TOKEN              - Apify API token (used to run the actors)
- *   RAPIDAPI_PROXY_SECRET    - Optional, if set the server validates the
- *                              X-RapidAPI-Proxy-Secret header on every request
+ *   APIFY_TOKEN              - Apify API token
+ *   RAPIDAPI_PROXY_SECRET    - Optional secret for RapidAPI requests
  *   PORT                     - Port to listen on (default 3000)
  */
 
@@ -36,20 +28,33 @@ if (!APIFY_TOKEN) {
 const apify = new ApifyClient({ token: APIFY_TOKEN });
 
 // ─────────────────────────────────────────────
-// Actor IDs
+// Actor IDs (all 13)
 // ─────────────────────────────────────────────
 const ACTORS = {
-  youtube: "inexhaustible_glass/youtube-transcript-extractor",
-  linkedin: "inexhaustible_glass/linkedin-email-finder",
-  trends: "inexhaustible_glass/google-trends-scraper",
-  maps: "amanbhawsar/smart-lead-finder-email-extractor",
+  // Original 4
+  youtube:   "inexhaustible_glass/youtube-transcript-extractor",
+  linkedin:  "inexhaustible_glass/linkedin-email-finder",
+  trends:    "inexhaustible_glass/google-trends-scraper",
+  maps:      "inexhaustible_glass/smart-lead-finder-email-extractor",
+  // Social
+  instagram: "inexhaustible_glass/instagram-lead-finder",
+  skyscout:  "inexhaustible_glass/skyscout",
+  shophound: "inexhaustible_glass/shophound",
+  // India B2B
+  tenderhawk: "inexhaustible_glass/tenderhawk",
+  gsthawk:    "inexhaustible_glass/gsthawk",
+  mcahawk:    "inexhaustible_glass/mcahawk",
+  // Global B2B
+  ukhawk:    "inexhaustible_glass/ukhawk",
+  frhawk:    "inexhaustible_glass/frhawk",
+  dehawk:    "inexhaustible_glass/dehawk",
 };
 
 // ─────────────────────────────────────────────
 // Middleware: validate RapidAPI proxy secret
 // ─────────────────────────────────────────────
 function verifyRapidApi(req, res, next) {
-  if (!RAPIDAPI_PROXY_SECRET) return next(); // dev mode - skip
+  if (!RAPIDAPI_PROXY_SECRET) return next();
   const got = req.header("X-RapidAPI-Proxy-Secret");
   if (got !== RAPIDAPI_PROXY_SECRET) {
     return res.status(401).json({ error: "Unauthorized — invalid RapidAPI proxy secret" });
@@ -58,195 +63,173 @@ function verifyRapidApi(req, res, next) {
 }
 
 // ─────────────────────────────────────────────
-// Helper: run an Apify actor and return items
+// Helper: run Apify actor → return items
 // ─────────────────────────────────────────────
 async function runActor(actorId, input, { memory = 512, timeoutSecs = 300 } = {}) {
-  const run = await apify.actor(actorId).call(input, {
-    memory,
-    timeout: timeoutSecs,
-  });
+  const run = await apify.actor(actorId).call(input, { memory, timeout: timeoutSecs });
   const { items } = await apify.dataset(run.defaultDatasetId).listItems();
   return { runId: run.id, status: run.status, items };
 }
 
+// Generic endpoint factory
+function makeEndpoint(actorKey, validator, { memory, timeoutSecs, responseKey = "results" } = {}) {
+  return async (req, res) => {
+    try {
+      const input = req.body || {};
+      const error = validator(input);
+      if (error) return res.status(400).json({ error });
+
+      const { items } = await runActor(ACTORS[actorKey], input, { memory, timeoutSecs });
+      res.json({ success: true, count: items.length, [responseKey]: items });
+    } catch (err) {
+      console.error(`${actorKey} error:`, err.message);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  };
+}
+
 // ─────────────────────────────────────────────
-// Health check
+// Health & discovery
 // ─────────────────────────────────────────────
 app.get("/", (req, res) => {
   res.json({
     name: "Apify RapidAPI Proxy",
-    version: "1.0.0",
+    version: "2.0.0",
     status: "healthy",
     endpoints: [
+      // Social/Content
       "POST /youtube-transcript",
+      "POST /instagram-profile",
+      "POST /bluesky-profile",
+      "POST /etsy-shop",
+      // B2B Leads
       "POST /lead-enrichment",
-      "POST /google-trends",
       "POST /google-maps-leads",
+      "POST /google-trends",
+      // India
+      "POST /india-tenders",
+      "POST /india-gst",
+      "POST /india-company",
+      // Global B2B
+      "POST /uk-company",
+      "POST /france-company",
+      "POST /germany-company",
     ],
   });
 });
 
 app.get("/health", (req, res) => res.json({ status: "ok" }));
 
-// ─────────────────────────────────────────────
-// 1. YouTube Transcript Scraper
-// ─────────────────────────────────────────────
-app.post("/youtube-transcript", verifyRapidApi, async (req, res) => {
-  try {
-    const { urls, language = "en" } = req.body || {};
+// ═════════════════════════════════════════════
+// ORIGINAL 4 (keep existing for backward compat)
+// ═════════════════════════════════════════════
 
-    if (!Array.isArray(urls) || urls.length === 0) {
-      return res.status(400).json({
-        error: "Missing required field: 'urls' must be a non-empty array",
-        example: {
-          urls: ["https://www.youtube.com/watch?v=dQw4w9WgXcQ"],
-          language: "en",
-        },
-      });
-    }
+app.post("/youtube-transcript", verifyRapidApi, makeEndpoint(
+  "youtube",
+  (i) => !Array.isArray(i.urls) || i.urls.length === 0
+    ? "'urls' must be a non-empty array" : null,
+  { responseKey: "results" }
+));
 
-    if (urls.length > 50) {
-      return res.status(400).json({
-        error: "Max 50 URLs per request. Split into multiple calls for larger batches.",
-      });
-    }
+app.post("/lead-enrichment", verifyRapidApi, makeEndpoint(
+  "linkedin",
+  (i) => !Array.isArray(i.urls) || i.urls.length === 0
+    ? "'urls' must be a non-empty array" : null,
+  { memory: 1024, timeoutSecs: 600, responseKey: "leads" }
+));
 
-    const { items } = await runActor(ACTORS.youtube, { urls, language });
+app.post("/google-trends", verifyRapidApi, makeEndpoint(
+  "trends",
+  (i) => !Array.isArray(i.keywords) || i.keywords.length === 0
+    ? "'keywords' must be a non-empty array" : null,
+  { memory: 1024, timeoutSecs: 600, responseKey: "trends" }
+));
 
-    res.json({
-      success: true,
-      count: items.length,
-      results: items,
-    });
-  } catch (err) {
-    console.error("youtube-transcript error:", err.message);
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
+app.post("/google-maps-leads", verifyRapidApi, makeEndpoint(
+  "maps",
+  (i) => !i.search_query || typeof i.search_query !== "string"
+    ? "'search_query' required (string)" : null,
+  { memory: 1024, timeoutSecs: 900, responseKey: "businesses" }
+));
 
-// ─────────────────────────────────────────────
-// 2. B2B Lead Enrichment (Email Finder + LinkedIn)
-// ─────────────────────────────────────────────
-app.post("/lead-enrichment", verifyRapidApi, async (req, res) => {
-  try {
-    const { urls, firstName = "", lastName = "" } = req.body || {};
+// ═════════════════════════════════════════════
+// NEW: Social/Content Actors
+// ═════════════════════════════════════════════
 
-    if (!Array.isArray(urls) || urls.length === 0) {
-      return res.status(400).json({
-        error: "Missing required field: 'urls' must be a non-empty array of company websites",
-        example: {
-          urls: ["https://stripe.com", "https://figma.com"],
-          firstName: "John",
-          lastName: "Doe",
-        },
-      });
-    }
+app.post("/instagram-profile", verifyRapidApi, makeEndpoint(
+  "instagram",
+  (i) => !Array.isArray(i.usernames) || i.usernames.length === 0
+    ? "'usernames' must be a non-empty array (without @)" : null,
+  { memory: 1024, timeoutSecs: 600, responseKey: "profiles" }
+));
 
-    if (urls.length > 25) {
-      return res.status(400).json({
-        error: "Max 25 URLs per request.",
-      });
-    }
+app.post("/bluesky-profile", verifyRapidApi, makeEndpoint(
+  "skyscout",
+  (i) => (!Array.isArray(i.handles) || i.handles.length === 0) && !i.searchQuery
+    ? "Provide 'handles' array or 'searchQuery' string" : null,
+  { memory: 512, timeoutSecs: 300, responseKey: "profiles" }
+));
 
-    const { items } = await runActor(
-      ACTORS.linkedin,
-      { urls, firstName, lastName },
-      { memory: 1024, timeoutSecs: 600 }
-    );
+app.post("/etsy-shop", verifyRapidApi, makeEndpoint(
+  "shophound",
+  (i) => !Array.isArray(i.shops) || i.shops.length === 0
+    ? "'shops' must be a non-empty array (shop names)" : null,
+  { memory: 1024, timeoutSecs: 600, responseKey: "shops" }
+));
 
-    res.json({
-      success: true,
-      count: items.length,
-      leads: items,
-    });
-  } catch (err) {
-    console.error("lead-enrichment error:", err.message);
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
+// ═════════════════════════════════════════════
+// NEW: India B2B
+// ═════════════════════════════════════════════
 
-// ─────────────────────────────────────────────
-// 3. Google Trends Scraper
-// ─────────────────────────────────────────────
-app.post("/google-trends", verifyRapidApi, async (req, res) => {
-  try {
-    const {
-      keywords,
-      timeframe = "today 3-m",
-      geo = "",
-      category = 0,
-      includeTrending = false,
-      trendingCountry = "united_states",
-    } = req.body || {};
+app.post("/india-tenders", verifyRapidApi, makeEndpoint(
+  "tenderhawk",
+  () => null,  // all optional
+  { memory: 512, timeoutSecs: 300, responseKey: "tenders" }
+));
 
-    if (!Array.isArray(keywords) || keywords.length === 0) {
-      return res.status(400).json({
-        error: "Missing required field: 'keywords' must be a non-empty array",
-        example: {
-          keywords: ["AI", "ChatGPT", "Claude"],
-          timeframe: "today 3-m",
-          geo: "US",
-        },
-      });
-    }
+app.post("/india-gst", verifyRapidApi, makeEndpoint(
+  "gsthawk",
+  (i) => {
+    if (!Array.isArray(i.gstins) || i.gstins.length === 0)
+      return "'gstins' must be a non-empty array of 15-char GSTIN codes";
+    if (!i.appyflowKey)
+      return "'appyflowKey' required — get free at https://appyflow.in/verify-gst/";
+    return null;
+  },
+  { memory: 512, timeoutSecs: 600, responseKey: "verified" }
+));
 
-    if (keywords.length > 100) {
-      return res.status(400).json({ error: "Max 100 keywords per request." });
-    }
+app.post("/india-company", verifyRapidApi, makeEndpoint(
+  "mcahawk",
+  (i) => (!Array.isArray(i.cins) || i.cins.length === 0) && (!Array.isArray(i.searchQueries) || i.searchQueries.length === 0)
+    ? "Provide 'cins' (CIN codes) or 'searchQueries' (name search)" : null,
+  { memory: 512, timeoutSecs: 600, responseKey: "companies" }
+));
 
-    const { items } = await runActor(
-      ACTORS.trends,
-      { keywords, timeframe, geo, category, includeTrending, trendingCountry },
-      { memory: 1024, timeoutSecs: 600 }
-    );
+// ═════════════════════════════════════════════
+// NEW: Global B2B (UK, France, Germany)
+// ═════════════════════════════════════════════
 
-    res.json({ success: true, count: items.length, trends: items });
-  } catch (err) {
-    console.error("google-trends error:", err.message);
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
+app.post("/uk-company", verifyRapidApi, makeEndpoint(
+  "ukhawk",
+  (i) => (!Array.isArray(i.companyNumbers) || i.companyNumbers.length === 0) && (!Array.isArray(i.searchQueries) || i.searchQueries.length === 0)
+    ? "Provide 'companyNumbers' or 'searchQueries'" : null,
+  { memory: 512, timeoutSecs: 600, responseKey: "companies" }
+));
 
-// ─────────────────────────────────────────────
-// 4. Google Maps Business Leads
-// ─────────────────────────────────────────────
-app.post("/google-maps-leads", verifyRapidApi, async (req, res) => {
-  try {
-    const {
-      search_query,
-      max_results = 20,
-      extract_emails = true,
-      extract_website = true,
-      language = "en",
-    } = req.body || {};
+app.post("/france-company", verifyRapidApi, makeEndpoint(
+  "frhawk",
+  (i) => (!Array.isArray(i.sirens) || i.sirens.length === 0) && (!Array.isArray(i.searchQueries) || i.searchQueries.length === 0)
+    ? "Provide 'sirens' (9-digit) or 'searchQueries'" : null,
+  { memory: 512, timeoutSecs: 600, responseKey: "companies" }
+));
 
-    if (!search_query || typeof search_query !== "string") {
-      return res.status(400).json({
-        error: "Missing required field: 'search_query' (string)",
-        example: {
-          search_query: "Restaurants in Mumbai",
-          max_results: 20,
-          extract_emails: true,
-        },
-      });
-    }
-
-    if (max_results > 100) {
-      return res.status(400).json({ error: "Max 100 results per request." });
-    }
-
-    const { items } = await runActor(
-      ACTORS.maps,
-      { search_query, max_results, extract_emails, extract_website, language },
-      { memory: 1024, timeoutSecs: 900 }
-    );
-
-    res.json({ success: true, count: items.length, businesses: items });
-  } catch (err) {
-    console.error("google-maps-leads error:", err.message);
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
+app.post("/germany-company", verifyRapidApi, makeEndpoint(
+  "dehawk",
+  (i) => !Array.isArray(i.queries) || i.queries.length === 0
+    ? "'queries' must be a non-empty array (Northdata URLs or Company+Name,+City/HRB+Number)" : null,
+  { memory: 512, timeoutSecs: 600, responseKey: "companies" }
+));
 
 // ─────────────────────────────────────────────
 // Error fallback
@@ -257,5 +240,5 @@ app.use((err, req, res, next) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Apify RapidAPI proxy listening on port ${PORT}`);
+  console.log(`Apify RapidAPI proxy v2.0 listening on port ${PORT} — 13 endpoints`);
 });
